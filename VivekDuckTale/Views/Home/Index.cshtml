@@ -1,0 +1,253 @@
+﻿@{
+    ViewBag.Title = "Home Page";
+}
+
+
+<div>
+    <table id="myTable">
+        <tr>
+            <td style="padding-right:30px">First Name</td>
+            <td><input type="text" id="txtFirstName" style="width:130px" /> </td>
+        </tr>
+        <tr>
+            <td style="padding-right:30px">Last Name</td>
+            <td><input type="text" id="txtLastName" style="width:130px" /> </td>
+        </tr>
+        <tr>
+            <td style="padding-right:30px">Class</td>
+            <td><input type="text" id="txtClass" style="width:130px" /> </td>
+        </tr>
+        <tr>
+            <td style="padding-right:30px">Subject</td>
+            <td><input type="text" id="txtSubject" style="width:130px" /> </td>
+        </tr>
+        <tr>
+            <td style="padding-right:30px">Marks</td>
+            <td><input type="text" id="txtMarks" style="width:130px" /> </td>
+        </tr>
+        <tr>
+            <td><input type="button" id="btnSave" value="Save" />
+            <input type="hidden" id="hdnID" value="0" />
+            </td>
+        </tr>
+    </table>
+</div>
+<div style="margin-top:150px">
+
+</div>
+<div id="divStudentData">
+    <table style="margin-bottom:25px">
+        <tr>
+            <td><input type="text" id="txtSearch" name="name" value="" placeholder="Search" /></td>
+            <td style="padding-left:30px"><select id="drpSubjectFilter" name="name" value="" /></td>
+        </tr>
+    </table>
+    <table id="studentDataTable" style="visibility:hidden" class="grid">
+        <thead>
+            <tr>
+                <th>First Name</th>
+                <th>Last Name</th>
+                <th>Class</th>
+                <th>Subjcet</th>
+                <th>Marks</th>
+                <th></th>
+                <th></th>
+            </tr>
+        </thead>
+    </table>
+</div>
+<style>
+    table.grid  {
+        font-family: arial, sans-serif;
+        border-collapse: collapse;
+        width: 100%;
+    }
+
+    table.grid td, th {
+        border: 1px solid #dddddd;
+        text-align: left;
+        padding: 8px;
+    }
+
+    table.grid tr:nth-child(even) {
+        background-color: #dddddd;
+    }
+
+    table#myTable td {
+        padding: 8px;
+    }
+</style>
+
+@section Scripts{
+    <script>
+        $(document).ready(function () {
+            GetStudents();
+            GetSubjects();
+        });
+
+        $("#drpSubjectFilter").on("change", function () {
+            GetStudents();
+        });
+        $('#txtSearch').keyup(function (e) {
+            
+                GetStudents();
+            
+        });
+
+        $("#btnSave").on("click", function () {
+
+            var id = 0;
+            var firstName = $("#txtFirstName").val();
+            var lastName = $("#txtLastName").val();
+            var studentClass = $("#txtClass").val();
+            var subject = $("#txtSubject").val();
+            var marks = $("#txtMarks").val();
+            var studentModel = {};
+
+            studentModel.ID = $("#hdnID").val();
+            $("#hdnID").val("0");
+            studentModel.FirstName = firstName;
+            studentModel.LastName = lastName;
+            studentModel.Class = studentClass;
+            studentModel.SubjectName = subject;
+            studentModel.Marks = marks;
+            
+
+            $.ajax({
+                type: "POST",
+                url: "/Home/SaveStudent",
+                data:  studentModel ,
+                dataType: "Json",
+                success: function (data) {
+                    if (data.status == true) {
+                        $("#btnSave").val("Save");
+                        
+                        GetStudents();
+                        GetSubjects();
+                        //$('#studentDataTable').append("<tr><td>" + firstName + "</><td>" + lastName + "</td><td>" + studentClass + "</><td>" + subject + "</td><td>" + marks + "</td></tr>");
+                        $("#txtFirstName").val('');
+                         $("#txtLastName").val('');
+                         $("#txtClass").val('');
+                        $("#txtSubject").val('');
+                        $("#txtMarks").val('');
+                        alert("success");
+                    }
+                },
+                error: function ajaxError(response) {
+                    alert(response.status + ' ' + response.statusText);
+                }
+            });
+        });
+
+        $(document).on("click", "#studentDataTable", function () {
+            $(".edit").on("click", function () {
+                var ID = $(this).data("id");
+                $("#hdnID").val(ID);
+                
+                $.ajax({
+                    type: "GET",
+                    contentType: "application/json; charset=utf-8",
+                    url: "/Home/GetStudentDetail",
+                    data: { ID: ID },
+                    dataType: "Json",
+                    success: function (data) {
+                        if (data.details == null) {
+                            $("#txtFirstName").val('');
+                            $("#txtLastName").val('');
+                            $("#txtClass").val('');
+                            $("#txtSubject").val('');
+                            $("#txtMarks").val('');
+                        }
+                        else {
+                            $("#btnSave").val("Update");
+                            $("#txtFirstName").val(data.details.FirstName);
+                            $("#txtLastName").val(data.details.LastName);
+                            $("#txtClass").val(data.details.Class);
+                            $("#txtSubject").val(data.details.SubjectName);
+                            $("#txtMarks").val(data.details.Marks);
+                        }
+                    },
+                    error: function ajaxError(response) {
+                        alert(response.status + ' ' + response.statusText);
+                    }
+                });
+
+            });
+
+            $(".delete").on("click", function () {
+                if (confirm("are you sure you want to delete the student record?")) {
+                    var ID = $(this).data("id");
+                    $.ajax({
+                        type: "POST",
+                        url: "/Home/DeleteStudent",
+                        data: { ID: ID },
+                        dataType: "Json",
+                        success: function (data) {
+                            if (data.status == true) {
+                                alert("success");
+                                GetStudents();
+                            }
+                        },
+                        error: function ajaxError(response) {
+                            alert(response.status + ' ' + response.statusText);
+                        }
+                    });
+                }
+                else {
+                    return false;
+                }
+
+            });
+        });
+        
+        function GetStudents() {
+            var searchValue = $("#txtSearch").val();
+            var filterValue = $("#drpSubjectFilter").val();
+
+            $.ajax({
+                type: "GET",
+                contentType: "application/json; charset=utf-8",
+                url: "/Home/GetStudents",
+                data: { Search: searchValue, SubjectID: filterValue },
+                dataType: "Json",
+                success: function (data) {
+                    $("#studentDataTable").find("tr:gt(0)").remove();
+                    if (data.details.length > 0) {
+                        $('#studentDataTable').css("visibility", "visible");
+                    }
+                    else {
+                        $('#studentDataTable').css("visibility", "hidden");
+                    }
+                    dataHtml = "";
+                    $.each(data.details, function (i, item) {
+                        dataHtml += "<tr><td>" + item.FirstName + "</><td>" + item.LastName + "</td><td>" + item.Class + "</><td>" + item.SubjectName + "</td><td>" + item.Marks + "</td><td><input type ='button' value = 'Edit' class = 'edit' data-id = " + item.ID + " </td><td><input type ='button' value = 'Delete' class = 'delete' data-id = " + item.ID + " </td></tr>";
+                    });
+                    $('#studentDataTable').append(dataHtml);
+                },
+                error: function ajaxError(response) {
+                    alert(response.status + ' ' + response.statusText);
+                }
+            });
+        }
+
+        function GetSubjects() {
+            $.ajax({
+                type: "GET",
+                contentType: "application/json; charset=utf-8",
+                url: "/Home/GetSubjects",
+                dataType: "Json",
+                success: function (data) {
+                    $("#drpSubjectFilter").append($("<option></option>").val(0).html("Select Subject"));
+                    $.each(data.Subjects, function (key, value) {
+                        $("#drpSubjectFilter").append($("<option></option>").val(value.ID).html(value.SubjectName));
+                    });
+                    $('#studentDataTable').append(dataHtml);
+                },
+                error: function ajaxError(response) {
+                    alert(response.status + ' ' + response.statusText);
+                }
+            });
+        }
+       
+    </script>
+}
